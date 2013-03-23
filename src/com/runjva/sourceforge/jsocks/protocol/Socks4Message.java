@@ -15,7 +15,8 @@ class Socks4Message extends ProxyMessage {
 
 	private byte[] msgBytes;
 	private int msgLength;
-
+	private static final String EMPTY_USERNAME = "";
+	
 	/**
 	 * Server failed reply, cmd command for failed request
 	 */
@@ -114,17 +115,26 @@ class Socks4Message extends ProxyMessage {
 		d_in.readFully(addr);
 		ip = bytes2IP(addr);
 		host = ip.getHostName();
+		
 		if (!clientMode) {			
 			//read stream until NULL byte(0) or end of stream
-			StringBuilder bulder = new StringBuilder(64);//simple guess of username size			
-			int b;			
-			while((b = in.read()) > 0){
-				bulder.append((byte)b);
-			}
-			user = bulder.toString();
+			//optimization: if the first byte is empty - no username provided and no object creation
+			int b = in.read();
+			if(b > 0){
+				StringBuilder builder = new StringBuilder(64);//simple guess of username size		
+				builder.append(b);
+				
+				while((b = in.read()) > 0){
+					builder.append((byte)b);
+				}
+				
+				user = builder.toString();				
+			} else {
+				user = EMPTY_USERNAME;
+			}							
 		} 
 	}
-
+		
 	public void write(final OutputStream out) throws IOException {
 		if (msgBytes == null) {
 			final Socks4Message msg;

@@ -114,17 +114,15 @@ class Socks4Message extends ProxyMessage {
 		d_in.readFully(addr);
 		ip = bytes2IP(addr);
 		host = ip.getHostName();
-		if (!clientMode) {
-			int b = in.read();
-			// FIXME: Hope there are no idiots with user name bigger than this
-			final byte[] userBytes = new byte[256];
-			int i = 0;
-			for (i = 0; (i < userBytes.length) && (b > 0); ++i) {
-				userBytes[i] = (byte) b;
-				b = in.read();
+		if (!clientMode) {			
+			//read stream until NULL byte(0) or end of stream
+			StringBuilder bulder = new StringBuilder(64);//simple guess of username size			
+			int b;			
+			while((b = in.read()) > 0){
+				bulder.append((byte)b);
 			}
-			user = new String(userBytes, 0, i);
-		}
+			user = bulder.toString();
+		} 
 	}
 
 	public void write(final OutputStream out) throws IOException {

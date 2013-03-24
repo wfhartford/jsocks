@@ -4,6 +4,7 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.IDN;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
@@ -16,7 +17,7 @@ class Socks4Message extends ProxyMessage {
 	private byte[] msgBytes;
 	private int msgLength;
 	private static final String EMPTY_USERNAME = "";
-	
+
 	/**
 	 * Server failed reply, cmd command for failed request
 	 */
@@ -113,28 +114,68 @@ class Socks4Message extends ProxyMessage {
 		port = d_in.readUnsignedShort();
 		final byte[] addr = new byte[4];
 		d_in.readFully(addr);
-		ip = bytes2IP(addr);
-		host = ip.getHostName();
-		
-		if (!clientMode) {			
-			//read stream until NULL byte(0) or end of stream
-			//optimization: if the first byte is empty - no username provided and no object creation
+
+		// read username
+		if (!clientMode) {
+			// read stream until NULL byte(0) or end of stream
+			// optimization: if the first byte is empty - no username provided
+			// and no object creation
 			int b = in.read();
-			if(b > 0){
-				StringBuilder builder = new StringBuilder(64);//simple guess of username size		
+			if (b > 0) {
+				StringBuilder builder = new StringBuilder(64);// simple guess of
 				builder.append(b);
-				
-				while((b = in.read()) > 0){
-					builder.append((byte)b);
+
+				while ((b = in.read()) > 0) {
+					builder.append((char) b);
 				}
-				
-				user = builder.toString();				
+
+				user = builder.toString();
 			} else {
 				user = EMPTY_USERNAME;
-			}							
-		} 
-	}
+			}
+		}
+
 		
+		// assign ip and host
+		// check if addred is 0.0.0.x
+		if (isInadmissibleIp(addr)) {
+			// read until NULL byte
+			StringBuilder builder = new StringBuilder(50);
+			int b;
+			while ((b = in.read()) > 0) {
+				builder.append((char) b);
+			}
+
+			String readedHost = builder.toString();
+
+			//for international domain name support 
+			if (IDN.toASCII(readedHost).length() > 255) {
+				throw new IllegalArgumentException(host + " IDN: "
+						+ IDN.toASCII(readedHost) + " exceeds 255 char limit");
+			}
+			host = IDN.toASCII(readedHost);
+			
+			ip = resolveHost(host);
+		} else {
+			ip = bytes2IP(addr);
+			host = ip.getHostName();
+		}
+	}
+
+	private boolean isInadmissibleIp(byte[] addr) {
+		boolean isInadmissibleIp = false;
+
+		if (addr[0] == 0 && addr[1] == 0 && addr[2] == 0 && addr[3] != 0) {
+			isInadmissibleIp = true;
+		}
+
+		return isInadmissibleIp;
+	}
+
+	private InetAddress resolveHost(String host) throws UnknownHostException {
+		return InetAddress.getByName(host);
+	}
+
 	public void write(final OutputStream out) throws IOException {
 		if (msgBytes == null) {
 			final Socks4Message msg;
@@ -147,12 +188,14 @@ class Socks4Message extends ProxyMessage {
 
 	// Class methods
 	static InetAddress bytes2IP(final byte[] addr) {
-		final String s = bytes2IPV4(addr, 0);
+		InetAddress inetAddress = null;
 		try {
-			return InetAddress.getByName(s);
+			inetAddress = InetAddress.getByAddress(addr);
 		} catch (final UnknownHostException uh_ex) {
-			return null;
+
 		}
+
+		return inetAddress;
 	}
 
 	// Constants

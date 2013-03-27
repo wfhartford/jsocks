@@ -21,7 +21,7 @@ public class SOCKS {
 
 	private static final String DEFAULT_CONFIG_FILE = "socks.properties";
 	private static final int DEFAULT_LISTENING_PORT = 1080;
-	final private static Logger log = LoggerFactory.getLogger(SOCKS.class);
+	private static final Logger log = LoggerFactory.getLogger(SOCKS.class);
 
 	private static void usage() {
 		log.info(

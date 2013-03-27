@@ -19,87 +19,78 @@ import com.runjva.sourceforge.jsocks.server.IdentAuthenticator;
 
 public class SOCKS {
 
+	private static final String DEFAULT_CONFIG_FILE = "socks.properties";
 	private static final int DEFAULT_LISTENING_PORT = 1080;
 	final private static Logger log = LoggerFactory.getLogger(SOCKS.class);
 
-	static public void usage() {
-		System.out.println("Usage: java SOCKS [inifile1 inifile2 ...]\n"
-				+ "If none inifile is given, uses socks.properties.\n");
+	private static void usage() {
+		log.info(
+				"Usage: java SOCKS inifile1%nIf none inifile is given, uses %s.%n",
+				DEFAULT_CONFIG_FILE);
 	}
 
 	static public void main(String[] args) {
 
-		String[] file_names;
+		String configFileName = DEFAULT_CONFIG_FILE;
 		int port = DEFAULT_LISTENING_PORT;
-		String logFile = null;
-		String host = null;
 
 		final IdentAuthenticator auth = new IdentAuthenticator();
 
 		InetAddress localIP = null;
 
-		if (args.length == 0) {
-			file_names = new String[] { "socks.properties" };
-		} else {
-			file_names = args;
+		if (args.length != 0) {
+			configFileName = args[0];
 		}
 
 		inform("Loading properties");
-		for (int i = 0; i < file_names.length; ++i) {
-
-			inform("Reading file " + file_names[i]);
-
-			final Properties pr = loadProperties(file_names[i]);
-			if (pr == null) {
-				System.err.println("Loading of properties from "
-						+ file_names[i] + "failed.");
-				usage();
-				return;
-			}
-			if (!addAuth(auth, pr)) {
-				System.err.println("Error in file " + file_names[i] + ".");
-				usage();
-				return;
-			}
-			// First file should contain all global settings,
-			// like port and host and log.
-			if (i == 0) {
-				final String port_s = (String) pr.get("port");
-				if (port_s != null) {
-					try {
-						port = Integer.parseInt(port_s);
-					} catch (final NumberFormatException nfe) {
-						System.err.println("Can't parse port: " + port_s);
-						return;
-					}
-				}
-
-				serverInit(pr);
-				logFile = (String) pr.get("log");
-				host = (String) pr.get("host");
-			}
-
-			// inform("Props:"+pr);
+		Properties properties = loadProperties(configFileName);
+		if (properties == null) {
+			log.error("Loading of properties from %s failed.", configFileName);
+			usage();
+			return;
 		}
 
-		if (logFile != null) {
-			System.err.println("log property not supported anymore.");
+		// check auth info provided and wellformed
+		if (!addAuth(auth, properties)) {
+			log.error("Error auth info(range, user) in config file %s.",
+					configFileName);
+			usage();
+			return;
 		}
+
+		final String port_s = (String) properties.get("port");
+		if (port_s != null) {
+			try {
+				port = Integer.parseInt(port_s);
+			} catch (final NumberFormatException nfe) {
+				log.error("Can't parse port: " + port_s);
+				return;
+			}
+		}
+
+		String host = (String) properties.get("host");
 		if (host != null) {
 			try {
 				localIP = InetAddress.getByName(host);
 			} catch (final UnknownHostException uhe) {
-				System.err.println("Can't resolve local ip: " + host);
+				log.error("Can't resolve local ip: " + host);
 				return;
 			}
 		}
 
 		inform("Using Ident Authentication scheme: " + auth);
+		// create proxy
 		final ProxyServer server = new ProxyServer(auth);
+
+		// config
+		serverInit(server, properties);
+		proxyInit(server, properties);
+
+		// start
 		server.start(port, 5, localIP);
 	}
 
-	static Properties loadProperties(String file_name) {
+	private static Properties loadProperties(String file_name) {
 
 		final Properties pr = new Properties();
 
@@ -113,7 +104,7 @@ public class SOCKS {
 		return pr;
 	}
 
-	static boolean addAuth(IdentAuthenticator ident, Properties pr) {
+	private static boolean addAuth(IdentAuthenticator ident, Properties pr) {
 
 		InetRange irange;
 
@@ -144,38 +135,35 @@ public class SOCKS {
 	/**
 	 * Does server initialisation.
 	 */
-	static void serverInit(Properties props) {
+	private static void serverInit(ProxyServer proxyServer, Properties props) {
 		int val;
 		val = readInt(props, "iddleTimeout");
 		if (val >= 0) {
-			ProxyServer.setIddleTimeout(val);
+			proxyServer.setIddleTimeout(val);
 			inform("Setting iddle timeout to " + val + " ms.");
 		}
 		val = readInt(props, "acceptTimeout");
 		if (val >= 0) {
-			ProxyServer.setAcceptTimeout(val);
+			proxyServer.setAcceptTimeout(val);
 			inform("Setting accept timeout to " + val + " ms.");
 		}
 		val = readInt(props, "udpTimeout");
 		if (val >= 0) {
-			ProxyServer.setUDPTimeout(val);
+			proxyServer.setUDPTimeout(val);
 			inform("Setting udp timeout to " + val + " ms.");
 		}
 
 		val = readInt(props, "datagramSize");
 		if (val >= 0) {
-			ProxyServer.setDatagramSize(val);
+			proxyServer.setDatagramSize(val);
 			inform("Setting datagram size to " + val + " bytes.");
 		}
-
-		proxyInit(props);
-
 	}
 
 	/**
 	 * Initialises proxy, if any specified.
 	 */
-	static void proxyInit(Properties props) {
+	private static void proxyInit(ProxyServer proxyServer, Properties props) {
 		String proxy_list;
 		SocksProxyBase proxy = null;
 		StringTokenizer st;
@@ -215,13 +203,13 @@ public class SOCKS {
 			proxy.setDirect(ir);
 		}
 
-		ProxyServer.setProxy(proxy);
+		proxyServer.setProxy(proxy);
 	}
 
 	/**
 	 * Inits range from the string of semicolon separated ranges.
 	 */
-	static InetRange parseInetRange(String source) {
+	private static InetRange parseInetRange(String source) {
 		final InetRange irange = new InetRange();
 
 		final StringTokenizer st = new StringTokenizer(source, ";");
@@ -236,7 +224,7 @@ public class SOCKS {
 	 * Integer representaion of the property named name, or -1 if one is not
 	 * found.
 	 */
-	static int readInt(Properties props, String name) {
+	private static int readInt(Properties props, String name) {
 		int result = -1;
 		final String val = (String) props.get(name);
 		if (val == null) {
@@ -255,15 +243,13 @@ public class SOCKS {
 	}
 
 	// Display functions
-	// /////////////////
-
-	static void inform(String s) {
+	private static void inform(String s) {
 		log.info(s);
 	}
 
-	static void exit(String msg) {
-		System.err.println("Error:" + msg);
-		System.err.println("Aborting operation");
+	private static void exit(String msg) {
+		log.error("Error:" + msg);
+		log.error("Aborting operation");
 		System.exit(0);
 	}
 }

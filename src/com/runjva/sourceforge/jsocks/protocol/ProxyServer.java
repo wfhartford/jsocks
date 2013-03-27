@@ -52,11 +52,11 @@ public class ProxyServer implements Runnable {
 	Thread pipe_thread1, pipe_thread2;
 	long lastReadTime;
 
-	static int iddleTimeout = 180000; // 3 minutes
-	static int acceptTimeout = 180000; // 3 minutes
+	private int iddleTimeout = 180000; // 3 minutes
+	private int acceptTimeout = 180000; // 3 minutes
 
-	static Logger log = LoggerFactory.getLogger(ProxyServer.class);
-	static SocksProxyBase proxy;
+	private static final Logger log = LoggerFactory.getLogger(ProxyServer.class);
+	private SocksProxyBase proxy;
 
 	// Public Constructors
 	// ///////////////////
@@ -94,7 +94,7 @@ public class ProxyServer implements Runnable {
 	 * @param p
 	 *            Proxy which should be used to handle user requests.
 	 */
-	public static void setProxy(final SocksProxyBase p) {
+	public void setProxy(final SocksProxyBase p) {
 		proxy = p;
 		// FIXME: Side effect.
 		UDPRelayServer.proxy = proxy;
@@ -105,7 +105,7 @@ public class ProxyServer implements Runnable {
 	 * 
 	 * @return Proxy wich is used to handle user requests.
 	 */
-	public static SocksProxyBase getProxy() {
+	public SocksProxyBase getProxy() {
 		return proxy;
 	}
 
@@ -115,7 +115,7 @@ public class ProxyServer implements Runnable {
 	 * Zero timeout implies infinity.<br>
 	 * Default timeout is 3 minutes.
 	 */
-	public static void setIddleTimeout(final int timeout) {
+	public void setIddleTimeout(final int timeout) {
 		iddleTimeout = timeout;
 	}
 
@@ -125,7 +125,7 @@ public class ProxyServer implements Runnable {
 	 * Zero timeout implies infinity.<br>
 	 * Default timeout is 3 minutes.
 	 */
-	public static void setAcceptTimeout(final int timeout) {
+	public void setAcceptTimeout(final int timeout) {
 		acceptTimeout = timeout;
 	}
 
@@ -134,7 +134,7 @@ public class ProxyServer implements Runnable {
 	 * Zero timeout implies infinity.<br>
 	 * Default timeout is 3 minutes.
 	 */
-	public static void setUDPTimeout(final int timeout) {
+	public void setUDPTimeout(final int timeout) {
 		UDPRelayServer.setTimeout(timeout);
 	}
 
@@ -143,7 +143,7 @@ public class ProxyServer implements Runnable {
 	 * Default size is 64K, a bit more than maximum possible size of the
 	 * datagram.
 	 */
-	public static void setDatagramSize(final int size) {
+	public void setDatagramSize(final int size) {
 		UDPRelayServer.setDatagramSize(size);
 	}
 

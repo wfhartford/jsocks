@@ -60,7 +60,7 @@ public class DnsProxyServer implements Runnable {
 	private static final Logger log = LoggerFactory.getLogger(DnsProxyServer.class);
 	private SocksProxyBase proxy;
 
-	private DnsResolver dnsResolver;
+	private final DnsResolver dnsResolver;
 	
 	// Public Constructors
 	// ///////////////////

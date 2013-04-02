@@ -11,6 +11,8 @@ import java.net.InetAddress;
 import java.net.NoRouteToHostException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,6 +35,7 @@ import com.runjva.sourceforge.jsocks.server.ServerAuthenticator;
  */
 public class DnsProxyServer implements Runnable {
 
+	private static final int DEFAULT_POOL_SIZE = 16;
 	ServerAuthenticator auth;
 	ProxyMessage msg = null;
 
@@ -42,7 +45,6 @@ public class DnsProxyServer implements Runnable {
 	InputStream in, remote_in;
 	OutputStream out, remote_out;
 
-	
 	int mode;
 	static final int START_MODE = 0;
 	static final int ACCEPT_MODE = 1;
@@ -57,29 +59,35 @@ public class DnsProxyServer implements Runnable {
 	private int iddleTimeout = 180000; // 3 minutes
 	private int acceptTimeout = 180000; // 3 minutes
 
-	private static final Logger log = LoggerFactory.getLogger(DnsProxyServer.class);
+	private static final Logger log = LoggerFactory
+			.getLogger(DnsProxyServer.class);
 	private SocksProxyBase proxy;
 
 	private final DnsResolver dnsResolver;
-	
+	private int poolSize = DEFAULT_POOL_SIZE;
+	private ExecutorService executor; 
+
+
 	// Public Constructors
 	// ///////////////////
-	
+
 	/**
 	 * Creates a proxy server with given Authentication scheme.
 	 * 
 	 * @param auth
 	 *            Authentication scheme to be used.
 	 */
-	public DnsProxyServer(final ServerAuthenticator auth, DnsResolver dnsResolver) {
+	public DnsProxyServer(final ServerAuthenticator auth,
+			DnsResolver dnsResolver) {
 		this.auth = auth;
 		this.dnsResolver = dnsResolver;
 	}
 
 	// Other constructors
 	// //////////////////
-	
-	DnsProxyServer(final ServerAuthenticator auth, final Socket s, DnsResolver dnsResolver) {
+
+	DnsProxyServer(final ServerAuthenticator auth, final Socket s,
+			DnsResolver dnsResolver) {
 		this.auth = auth;
 		this.sock = s;
 		this.mode = START_MODE;
@@ -88,6 +96,10 @@ public class DnsProxyServer implements Runnable {
 
 	// Public methods
 	// ///////////////
+
+	public void setPoolSize(int poolSize) {
+		this.poolSize = poolSize;
+	}
 
 	/**
 	 * Set proxy.
@@ -172,6 +184,9 @@ public class DnsProxyServer implements Runnable {
 	 */
 	public void start(final int port, final int backlog,
 			final InetAddress localIP) {
+		
+		executor = Executors.newFixedThreadPool(poolSize);
+		
 		try {
 			ss = new ServerSocket(port, backlog, localIP);
 			final String address = ss.getInetAddress().getHostAddress();
@@ -184,8 +199,9 @@ public class DnsProxyServer implements Runnable {
 				final int port2 = s.getPort();
 				log.info("Accepted from:{}:{}", hostName, port2);
 
-				final DnsProxyServer ps = new DnsProxyServer(auth, s, dnsResolver);
-				(new Thread(ps)).start();
+				final DnsProxyServer ps = new DnsProxyServer(auth, s,
+						dnsResolver);
+				executor.submit(ps);	
 			}
 		} catch (final IOException ioe) {
 			ioe.printStackTrace();
@@ -201,8 +217,12 @@ public class DnsProxyServer implements Runnable {
 		try {
 			if (ss != null) {
 				ss.close();
-			}
+			}			
 		} catch (final IOException ioe) {
+		}
+		
+		if(executor != null){
+			executor.shutdown();
 		}
 	}
 
@@ -362,12 +382,14 @@ public class DnsProxyServer implements Runnable {
 
 		if (msg instanceof Socks5Message) {
 			final int cmd = SocksProxyBase.SOCKS_SUCCESS;
-			Socks5Message socks5Message = new Socks5Message(cmd, localAddress, localPort);
+			Socks5Message socks5Message = new Socks5Message(cmd, localAddress,
+					localPort);
 			socks5Message.setDnsResolver(dnsResolver);
 			response = socks5Message;
 		} else {
 			final int cmd = Socks4Message.REPLY_OK;
-			Socks4Message socks4Message = new Socks4Message(cmd, localAddress, localPort);
+			Socks4Message socks4Message = new Socks4Message(cmd, localAddress,
+					localPort);
 			socks4Message.setDnsResolver(dnsResolver);
 			response = socks4Message;
 		}
@@ -392,12 +414,14 @@ public class DnsProxyServer implements Runnable {
 
 		if (msg.version == 5) {
 			final int cmd = SocksProxyBase.SOCKS_SUCCESS;
-			Socks5Message socks5Message = new Socks5Message(cmd, inetAddress, localPort);
+			Socks5Message socks5Message = new Socks5Message(cmd, inetAddress,
+					localPort);
 			socks5Message.setDnsResolver(dnsResolver);
 			response = socks5Message;
 		} else {
 			final int cmd = Socks4Message.REPLY_OK;
-			Socks4Message socks4Message = new Socks4Message(cmd, inetAddress, localPort);
+			Socks4Message socks4Message = new Socks4Message(cmd, inetAddress,
+					localPort);
 			socks4Message.setDnsResolver(dnsResolver);
 			response = socks4Message;
 		}
@@ -457,11 +481,12 @@ public class DnsProxyServer implements Runnable {
 
 		ProxyMessage response;
 
-		Socks5Message socks5Message = new Socks5Message(SocksProxyBase.SOCKS_SUCCESS,
-				relayServer.relayIP, relayServer.relayPort);
+		Socks5Message socks5Message = new Socks5Message(
+				SocksProxyBase.SOCKS_SUCCESS, relayServer.relayIP,
+				relayServer.relayPort);
 		socks5Message.setDnsResolver(dnsResolver);
 		response = socks5Message;
-		 
+
 		response.write(out);
 
 		relayServer.start();
@@ -526,12 +551,14 @@ public class DnsProxyServer implements Runnable {
 
 		if (msg.version == 5) {
 			final int cmd = SocksProxyBase.SOCKS_SUCCESS;
-			Socks5Message socks5Message = new Socks5Message(cmd, inetAddress, port);
+			Socks5Message socks5Message = new Socks5Message(cmd, inetAddress,
+					port);
 			socks5Message.setDnsResolver(dnsResolver);
 			response = socks5Message;
 		} else {
 			final int cmd = Socks4Message.REPLY_OK;
-			Socks4Message socks4Message = new Socks4Message(cmd, inetAddress, port);
+			Socks4Message socks4Message = new Socks4Message(cmd, inetAddress,
+					port);
 			socks4Message.setDnsResolver(dnsResolver);
 			response = socks4Message;
 		}
@@ -552,7 +579,7 @@ public class DnsProxyServer implements Runnable {
 		ProxyMessage msg;
 
 		if (version == 5) {
-			msg = new Socks5Message(push_in, false , dnsResolver);
+			msg = new Socks5Message(push_in, false, dnsResolver);
 		} else if (version == 4) {
 			msg = new Socks4Message(push_in, false, dnsResolver);
 		} else {

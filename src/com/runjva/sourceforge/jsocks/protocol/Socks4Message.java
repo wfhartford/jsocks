@@ -8,6 +8,12 @@ import java.net.IDN;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.runjva.sourceforge.jsocks.dns.DnsResolver;
+import com.runjva.sourceforge.jsocks.dns.DnsResolverFactory;
+
 /**
  * SOCKS4 Reply/Request message.
  */
@@ -17,7 +23,9 @@ class Socks4Message extends ProxyMessage {
 	private byte[] msgBytes;
 	private int msgLength;
 	private static final String EMPTY_USERNAME = "";
-
+	private Logger log = LoggerFactory.getLogger(Socks5Message.class);
+	private DnsResolver dnsResolver = DnsResolverFactory.getDefaultDnsResolverInstance();
+	
 	/**
 	 * Server failed reply, cmd command for failed request
 	 */
@@ -87,11 +95,27 @@ class Socks4Message extends ProxyMessage {
 	 * server response otherwise reads a client request see read for more detail
 	 */
 	public Socks4Message(final InputStream in, final boolean clientMode)
-			throws IOException {
+	throws IOException {
 		msgBytes = null;
 		read(in, clientMode);
 	}
-
+	
+	/**
+	 * Initialise from the stream If clientMode is true attempts to read a
+	 * server response otherwise reads a client request see read for more detail
+	 */
+	public Socks4Message(final InputStream in, final boolean clientMode, DnsResolver dnsResolver)
+	throws IOException {
+		msgBytes = null;
+		setDnsResolver(dnsResolver);
+		
+		read(in, clientMode);
+	}
+	
+	public void setDnsResolver(DnsResolver dnsResolver){
+		this.dnsResolver = dnsResolver;
+	}
+	
 	public void read(final InputStream in) throws IOException {
 		read(in, true);
 	}
@@ -135,7 +159,6 @@ class Socks4Message extends ProxyMessage {
 			}
 		}
 
-		
 		// assign ip and host
 		// check if addred is 0.0.0.x
 		if (isInadmissibleIp(addr)) {
@@ -148,13 +171,13 @@ class Socks4Message extends ProxyMessage {
 
 			String readedHost = builder.toString();
 
-			//for international domain name support 
+			// for international domain name support
 			if (IDN.toASCII(readedHost).length() > 255) {
 				throw new IllegalArgumentException(host + " IDN: "
 						+ IDN.toASCII(readedHost) + " exceeds 255 char limit");
 			}
 			host = IDN.toASCII(readedHost);
-			
+
 			ip = resolveHost(host);
 		} else {
 			ip = bytes2IP(addr);
@@ -173,13 +196,14 @@ class Socks4Message extends ProxyMessage {
 	}
 
 	private InetAddress resolveHost(String host) throws UnknownHostException {
-		return InetAddress.getByName(host);
+		return dnsResolver.resolveByName(host);
 	}
 
 	public void write(final OutputStream out) throws IOException {
 		if (msgBytes == null) {
 			final Socks4Message msg;
 			msg = new Socks4Message(version, command, ip, port, user);
+			msg.setDnsResolver(dnsResolver);
 			msgBytes = msg.msgBytes;
 			msgLength = msg.msgLength;
 		}

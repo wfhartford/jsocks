@@ -10,6 +10,9 @@ import java.net.UnknownHostException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.runjva.sourceforge.jsocks.dns.DnsResolver;
+import com.runjva.sourceforge.jsocks.dns.DnsResolverFactory;
+
 /**
  * SOCKS5 request/response message.
  */
@@ -21,7 +24,8 @@ class Socks5Message extends ProxyMessage {
 	byte[] data;
 
 	private Logger log = LoggerFactory.getLogger(Socks5Message.class);
-
+	private DnsResolver dnsResolver = DnsResolverFactory.getDefaultDnsResolverInstance();
+	
 	/**
 	 * Server error response.
 	 * 
@@ -148,11 +152,22 @@ class Socks5Message extends ProxyMessage {
 	 *             If any error happens with I/O.
 	 */
 	public Socks5Message(InputStream in, boolean clientMode)
-			throws SocksException, IOException {
-
+	throws SocksException, IOException {
+		
+		read(in, clientMode);
+	}
+	
+	public Socks5Message(InputStream in, boolean clientMode, DnsResolver dnsResolver)
+	throws SocksException, IOException {
+		setDnsResolver(dnsResolver);
+		
 		read(in, clientMode);
 	}
 
+	public void setDnsResolver(DnsResolver dnsResolver){
+		this.dnsResolver = dnsResolver;
+	}
+	
 	/**
 	 * Initialises Message from the stream. Reads server response from given
 	 * stream.
@@ -228,7 +243,7 @@ class Socks5Message extends ProxyMessage {
 
 		if ((addrType != SOCKS_ATYP_DOMAINNAME) && doResolveIP) {
 			try {
-				ip = InetAddress.getByName(host);
+				ip = dnsResolver.resolveByName(host);
 			} catch (final UnknownHostException uh_ex) {
 			}
 		}
@@ -249,7 +264,7 @@ class Socks5Message extends ProxyMessage {
 			} else {
 				if (ip == null) {
 					try {
-						ip = InetAddress.getByName(host);
+						ip = dnsResolver.resolveByName(host);
 					} catch (final UnknownHostException uh_ex) {
 						throw new SocksException(
 								SocksProxyBase.SOCKS_JUST_ERROR);
@@ -275,7 +290,7 @@ class Socks5Message extends ProxyMessage {
 			return ip;
 		}
 
-		return (ip = InetAddress.getByName(host));
+		return (ip = dnsResolver.resolveByName(host));
 	}
 
 	/**

@@ -10,6 +10,7 @@ import java.net.UnknownHostException;
 import java.util.Enumeration;
 import java.util.Hashtable;
 
+
 /**
  * SOCKS5 Proxy.
  */
@@ -22,6 +23,7 @@ public class Socks5Proxy extends SocksProxyBase implements Cloneable {
 
 	boolean resolveAddrLocally = true;
 	UDPEncapsulation udp_encapsulation = null;
+
 
 	// Public Constructors
 	// ====================

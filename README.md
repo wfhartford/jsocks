@@ -16,8 +16,10 @@ launch configuration using slf4j-simple has
 been included, which also allows for creating
 runnable jars from inside Eclipse 3.5+
 
-/ravn - 2009-09-07¨
+/ravn - 2009-09-07ï¿½
 
 Mavenized.  
 
 /ravn - 2012-11-07
+
+[![githalytics.com alpha](https://cruel-carlota.pagodabox.com/e916b2488ff3d9cfb9c63a9fddfd83b3 "githalytics.com")](http://githalytics.com/elbegemot/jsocks)

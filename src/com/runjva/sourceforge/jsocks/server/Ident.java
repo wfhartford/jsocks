@@ -149,7 +149,7 @@ public class Ident {
 			errorMessage = st.nextToken();
 		} else {
 			errorCode = ERR_PROTOCOL_INCORRECT;
-			System.out.println("Opa!");
+			//System.out.println("Opa!");
 			errorMessage = "Can't parse server response.";
 		}
 

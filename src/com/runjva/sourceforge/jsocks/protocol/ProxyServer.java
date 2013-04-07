@@ -182,7 +182,7 @@ public class ProxyServer implements Runnable {
 				(new Thread(ps)).start();
 			}
 		} catch (final IOException ioe) {
-			ioe.printStackTrace();
+			log.error("Can't start proxy", ioe);
 		} finally {
 		}
 	}
@@ -208,8 +208,8 @@ public class ProxyServer implements Runnable {
 			try {
 				startSession();
 			} catch (final IOException ioe) {
+				log.error("START_MODE exception.", ioe);
 				handleException(ioe);
-				// ioe.printStackTrace();
 			} finally {
 				abort();
 				if (auth != null) {
@@ -227,7 +227,7 @@ public class ProxyServer implements Runnable {
 				// been accepted.
 				pipe(remote_in, out);
 			} catch (final IOException ioe) {
-				// log("Accept exception:"+ioe);
+				log.error("ACCEPT_MODE exception.", ioe);
 				handleException(ioe);
 			} finally {
 				abort();
@@ -238,6 +238,7 @@ public class ProxyServer implements Runnable {
 			try {
 				pipe(remote_in, out);
 			} catch (final IOException ioe) {
+				log.error("PIPE_MODE exception.", ioe);
 			} finally {
 				abort();
 				log.info("Support thread(remote->client) stopped");

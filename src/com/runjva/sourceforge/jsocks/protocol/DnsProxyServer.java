@@ -204,7 +204,7 @@ public class DnsProxyServer implements Runnable {
 				executor.submit(ps);	
 			}
 		} catch (final IOException ioe) {
-			ioe.printStackTrace();
+			log.error("Can't start proxy", ioe);
 		} finally {
 		}
 	}
@@ -234,8 +234,8 @@ public class DnsProxyServer implements Runnable {
 			try {
 				startSession();
 			} catch (final IOException ioe) {
+				log.error("START_MODE exception.", ioe);
 				handleException(ioe);
-				// ioe.printStackTrace();
 			} finally {
 				abort();
 				if (auth != null) {
@@ -253,7 +253,7 @@ public class DnsProxyServer implements Runnable {
 				// been accepted.
 				pipe(remote_in, out);
 			} catch (final IOException ioe) {
-				// log("Accept exception:"+ioe);
+				log.error("ACCEPT_MODE exception.", ioe);
 				handleException(ioe);
 			} finally {
 				abort();
@@ -264,6 +264,7 @@ public class DnsProxyServer implements Runnable {
 			try {
 				pipe(remote_in, out);
 			} catch (final IOException ioe) {
+				log.error("PIPE_MODE error", ioe);
 			} finally {
 				abort();
 				log.info("Support thread(remote->client) stopped");

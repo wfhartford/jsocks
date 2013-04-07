@@ -19,11 +19,11 @@ import com.runjva.sourceforge.jsocks.dns.DnsResolverFactory;
  */
 
 class Socks4Message extends ProxyMessage {
-
+	private Logger log = LoggerFactory.getLogger(Socks4Message.class);
+	private static final String EMPTY_USERNAME = "";
+	
 	private byte[] msgBytes;
 	private int msgLength;
-	private static final String EMPTY_USERNAME = "";
-	private Logger log = LoggerFactory.getLogger(Socks5Message.class);
 	private DnsResolver dnsResolver = DnsResolverFactory.getDefaultDnsResolverInstance();
 	
 	/**

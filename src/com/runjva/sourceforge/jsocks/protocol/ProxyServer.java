@@ -57,7 +57,7 @@ public class ProxyServer implements Runnable {
 
 	private static final Logger log = LoggerFactory.getLogger(ProxyServer.class);
 	private SocksProxyBase proxy;
-
+	private volatile ProxyStatus proxyStatus = ProxyStatus.STOPED;
 	// Public Constructors
 	// ///////////////////
 
@@ -146,7 +146,19 @@ public class ProxyServer implements Runnable {
 	public void setDatagramSize(final int size) {
 		UDPRelayServer.setDatagramSize(size);
 	}
-
+	
+	/**
+	 * Get internal state of proxy execution
+	 * @return
+	 */
+	public ProxyStatus getProxyStatus() {
+		return proxyStatus;
+	}
+	
+	private void setProxyStatus(ProxyStatus proxyStatus) {
+		this.proxyStatus = proxyStatus;
+	}
+	
 	/**
 	 * Start the Proxy server at given port.<br>
 	 * This methods blocks.
@@ -166,12 +178,13 @@ public class ProxyServer implements Runnable {
 	 */
 	public void start(final int port, final int backlog,
 			final InetAddress localIP) {
-		try {
+		try {			
 			ss = new ServerSocket(port, backlog, localIP);
 			final String address = ss.getInetAddress().getHostAddress();
 			final int localPort = ss.getLocalPort();
 			log.info("Starting SOCKS Proxy on: {}:{}", address, localPort);
-
+			setProxyStatus(ProxyStatus.STARTED); 
+			
 			while (true) {
 				final Socket s = ss.accept();
 				final String hostName = s.getInetAddress().getHostName();
@@ -183,6 +196,7 @@ public class ProxyServer implements Runnable {
 			}
 		} catch (final IOException ioe) {
 			log.error("Can't start proxy", ioe);
+			setProxyStatus(ProxyStatus.ERROR); 
 		} finally {
 		}
 	}
@@ -198,6 +212,7 @@ public class ProxyServer implements Runnable {
 			}
 		} catch (final IOException ioe) {
 		}
+		setProxyStatus(ProxyStatus.STOPED);
 	}
 
 	// Runnable interface

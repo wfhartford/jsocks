@@ -18,12 +18,12 @@ import com.runjva.sourceforge.jsocks.dns.DnsResolverFactory;
  */
 
 class Socks5Message extends ProxyMessage {
+	private Logger log = LoggerFactory.getLogger(Socks5Message.class);
+	
 	/** Address type of given message */
 	public int addrType;
 
 	byte[] data;
-
-	private Logger log = LoggerFactory.getLogger(Socks5Message.class);
 	private DnsResolver dnsResolver = DnsResolverFactory.getDefaultDnsResolverInstance();
 	
 	/**

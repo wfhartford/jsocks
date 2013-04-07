@@ -34,7 +34,8 @@ import com.runjva.sourceforge.jsocks.server.ServerAuthenticator;
  * @see socks.server.ServerAuthenticator
  */
 public class DnsProxyServer implements Runnable {
-
+	private static final Logger log = LoggerFactory
+	.getLogger(DnsProxyServer.class);
 	private static final int DEFAULT_POOL_SIZE = 16;
 	ServerAuthenticator auth;
 	ProxyMessage msg = null;
@@ -58,15 +59,12 @@ public class DnsProxyServer implements Runnable {
 
 	private int iddleTimeout = 180000; // 3 minutes
 	private int acceptTimeout = 180000; // 3 minutes
-
-	private static final Logger log = LoggerFactory
-			.getLogger(DnsProxyServer.class);
 	private SocksProxyBase proxy;
 
 	private final DnsResolver dnsResolver;
 	private int poolSize = DEFAULT_POOL_SIZE;
 	private ExecutorService executor; 
-
+	private volatile ProxyStatus proxyStatus = ProxyStatus.STOPED;
 
 	// Public Constructors
 	// ///////////////////
@@ -166,6 +164,18 @@ public class DnsProxyServer implements Runnable {
 	}
 
 	/**
+	 * Get internal state of proxy execution
+	 * @return
+	 */
+	public ProxyStatus getProxyStatus() {
+		return proxyStatus;
+	}
+	
+	private void setProxyStatus(ProxyStatus proxyStatus) {
+		this.proxyStatus = proxyStatus;
+	}
+	
+	/**
 	 * Start the Proxy server at given port.<br>
 	 * This methods blocks.
 	 */
@@ -192,7 +202,8 @@ public class DnsProxyServer implements Runnable {
 			final String address = ss.getInetAddress().getHostAddress();
 			final int localPort = ss.getLocalPort();
 			log.info("Starting SOCKS Proxy on: {}:{}", address, localPort);
-
+			setProxyStatus(ProxyStatus.STARTED); 
+			
 			while (true) {
 				final Socket s = ss.accept();
 				final String hostName = s.getInetAddress().getHostName();
@@ -205,6 +216,7 @@ public class DnsProxyServer implements Runnable {
 			}
 		} catch (final IOException ioe) {
 			log.error("Can't start proxy", ioe);
+			setProxyStatus(ProxyStatus.ERROR); 
 		} finally {
 		}
 	}
@@ -224,6 +236,7 @@ public class DnsProxyServer implements Runnable {
 		if(executor != null){
 			executor.shutdown();
 		}
+		setProxyStatus(ProxyStatus.STOPED); 
 	}
 
 	// Runnable interface

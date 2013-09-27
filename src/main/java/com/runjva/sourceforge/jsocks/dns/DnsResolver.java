@@ -4,5 +4,5 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 
 public interface DnsResolver {
-	public InetAddress resolveByName(String host) throws UnknownHostException;
+  public InetAddress resolveByName(String host) throws UnknownHostException;
 }

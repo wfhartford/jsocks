@@ -8,15 +8,16 @@ import java.io.OutputStream;
  */
 public class AuthenticationNone implements Authentication {
 
-	public Object[] doSocksAuthentication(final int methodId,
-			final java.net.Socket proxySocket) throws java.io.IOException {
+  @Override
+  public Object[] doSocksAuthentication(final int methodId,
+      final java.net.Socket proxySocket) throws java.io.IOException {
 
-		if (methodId != 0) {
-			return null;
-		}
+    if (methodId != 0) {
+      return null;
+    }
 
-		InputStream in = proxySocket.getInputStream();
-		OutputStream out = proxySocket.getOutputStream();
-		return new Object[] { in, out };
-	}
+    InputStream in = proxySocket.getInputStream();
+    OutputStream out = proxySocket.getOutputStream();
+    return new Object[] { in, out };
+  }
 }

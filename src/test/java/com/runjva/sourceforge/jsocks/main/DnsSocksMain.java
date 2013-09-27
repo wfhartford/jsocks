@@ -15,42 +15,42 @@ import com.runjva.sourceforge.jsocks.server.IdentAuthenticator;
  * DnsSocksProxy for manual testing
  */
 public class DnsSocksMain {
-	private static final Logger log = LoggerFactory
-			.getLogger(DnsSocksMain.class);
+  private static final Logger log = LoggerFactory
+      .getLogger(DnsSocksMain.class);
 
-	public static void main(String[] args) {
-		// programmatic config
-		int port = 1080;
+  public static void main(String[] args) {
+    // programmatic config
+    int port = 1080;
 
-		int iddleTimeout = 600000; // 10 minutes
-		int acceptTimeout = 60000; // 1 minute
-		int udpTimeout = 600000; // 10 minutes
+    int iddleTimeout = 600000; // 10 minutes
+    int acceptTimeout = 60000; // 1 minute
+    int udpTimeout = 600000; // 10 minutes
 
-		String range = "localhost";
+    String range = "localhost";
 
-		// create minimal range based auth object
-		final IdentAuthenticator auth = new IdentAuthenticator();
-		InetRange irange = new InetRange();
-		irange.add(range);
-		auth.add(irange, null);
+    // create minimal range based auth object
+    final IdentAuthenticator auth = new IdentAuthenticator();
+    InetRange irange = new InetRange();
+    irange.add(range);
+    auth.add(irange, null);
 
-		// create dns proxy server
-		
-		Map<String, String> hosts = new HashMap<String, String>();
-		hosts.put("www.yandex.ru", "213.180.193.3");
-		hosts.put("yandex.ru", "213.180.193.3");
-		hosts.put("www.ya.ru", "213.180.193.3");
-		hosts.put("ya.ru", "213.180.193.3");
+    // create dns proxy server
 
-		DnsProxyServer proxyServer = new DnsProxyServer(auth, new HashDnsResolver(hosts));
+    Map<String, String> hosts = new HashMap<String, String>();
+    hosts.put("www.yandex.ru", "213.180.193.3");
+    hosts.put("yandex.ru", "213.180.193.3");
+    hosts.put("www.ya.ru", "213.180.193.3");
+    hosts.put("ya.ru", "213.180.193.3");
 
-		// config timeouts
-		proxyServer.setIddleTimeout(iddleTimeout);
-		proxyServer.setAcceptTimeout(acceptTimeout);
-		proxyServer.setUDPTimeout(udpTimeout);
-		
-		//start proxy server
-		proxyServer.start(port);
-	}
+    DnsProxyServer proxyServer = new DnsProxyServer(auth, new HashDnsResolver(hosts));
+
+    // config timeouts
+    proxyServer.setIddleTimeout(iddleTimeout);
+    proxyServer.setAcceptTimeout(acceptTimeout);
+    proxyServer.setUDPTimeout(udpTimeout);
+
+    //start proxy server
+    proxyServer.start(port);
+  }
 
 }

@@ -11,72 +11,74 @@ import java.net.Socket;
  */
 public class UserPasswordAuthenticator extends ServerAuthenticatorBase {
 
-	static final int METHOD_ID = 2;
+  static final int METHOD_ID = 2;
 
-	UserValidation validator;
+  UserValidation validator;
 
-	/**
-	 * Construct a new UserPasswordAuthentication object, with given
-	 * UserVlaidation scheme.
-	 * 
-	 * @param v
-	 *            UserValidation to use for validating users.
-	 */
-	public UserPasswordAuthenticator(UserValidation validator) {
-		this.validator = validator;
-	}
+  /**
+   * Construct a new UserPasswordAuthentication object, with given
+   * UserVlaidation scheme.
+   *
+   * @param v
+   *     UserValidation to use for validating users.
+   */
+  public UserPasswordAuthenticator(UserValidation validator) {
+    this.validator = validator;
+  }
 
-	public ServerAuthenticator startSession(Socket s) throws IOException {
-		final InputStream in = s.getInputStream();
-		final OutputStream out = s.getOutputStream();
+  @Override
+  public ServerAuthenticator startSession(Socket s) throws IOException {
+    final InputStream in = s.getInputStream();
+    final OutputStream out = s.getOutputStream();
 
-		if (in.read() != 5) {
-			return null; // Drop non version 5 messages.
-		}
+    if (in.read() != 5) {
+      return null; // Drop non version 5 messages.
+    }
 
-		if (!selectSocks5Authentication(in, out, METHOD_ID)) {
-			return null;
-		}
-		if (!doUserPasswordAuthentication(s, in, out)) {
-			return null;
-		}
+    if (!selectSocks5Authentication(in, out, METHOD_ID)) {
+      return null;
+    }
+    if (!doUserPasswordAuthentication(s, in, out)) {
+      return null;
+    }
 
-		return new ServerAuthenticatorNone(in, out);
-	}
+    return new ServerAuthenticatorNone(in, out);
+  }
 
-	// Private Methods
-	// ////////////////
+  // Private Methods
+  // ////////////////
 
-	private boolean doUserPasswordAuthentication(Socket s, InputStream in,
-			OutputStream out) throws IOException {
-		final int version = in.read();
-		if (version != 1) {
-			return false;
-		}
+  private boolean doUserPasswordAuthentication(Socket s, InputStream in,
+      OutputStream out) throws IOException {
+    final int version = in.read();
+    if (version != 1) {
+      return false;
+    }
 
-		final int ulen = in.read();
-		if (ulen < 0) {
-			return false;
-		}
+    final int ulen = in.read();
+    if (ulen < 0) {
+      return false;
+    }
 
-		final byte[] user = new byte[ulen];
-		in.read(user);
-		final int plen = in.read();
-		if (plen < 0) {
-			return false;
-		}
-		final byte[] password = new byte[plen];
-		in.read(password);
+    final byte[] user = new byte[ulen];
+    in.read(user);
+    final int plen = in.read();
+    if (plen < 0) {
+      return false;
+    }
+    final byte[] password = new byte[plen];
+    in.read(password);
 
-		if (validator.isUserValid(new String(user), new String(password), s)) {
-			// System.out.println("user valid");
-			out.write(new byte[] { 1, 0 });
-		} else {
-			// System.out.println("user invalid");
-			out.write(new byte[] { 1, 1 });
-			return false;
-		}
+    if (validator.isUserValid(new String(user), new String(password), s)) {
+      // System.out.println("user valid");
+      out.write(new byte[] { 1, 0 });
+    }
+    else {
+      // System.out.println("user invalid");
+      out.write(new byte[] { 1, 1 });
+      return false;
+    }
 
-		return true;
-	}
+    return true;
+  }
 }

@@ -11,6 +11,7 @@ import java.net.InetAddress;
 import java.net.NoRouteToHostException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.concurrent.ThreadFactory;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,12 +42,16 @@ class ProxyServerRunnable implements Runnable {
   private final int acceptTimeout;
   private final SocksProxyBase proxy;
   private ServerAuthenticator auth;
+  private final ThreadFactory threadFactory;
+  private final ProxyMonitor monitor;
 
   ProxyServerRunnable(final ProxyServerParams params, final Socket s) {
     this.idleTimeout = params.getIdleTimeout();
     this.acceptTimeout = params.getAcceptTimeout();
     this.proxy = params.getProxy();
     this.auth = params.getAuth();
+    this.threadFactory = params.getThreadFactory();
+    this.monitor = params.getMonitor();
     this.sock = s;
     this.mode = START_MODE;
   }
@@ -261,7 +266,7 @@ class ProxyServerRunnable implements Runnable {
     mode = ACCEPT_MODE;
 
     pipe_thread1 = Thread.currentThread();
-    pipe_thread2 = new Thread(this);
+    pipe_thread2 = threadFactory.newThread(this);
     pipe_thread2.start();
 
     // Make timeout infinit.
@@ -371,16 +376,16 @@ class ProxyServerRunnable implements Runnable {
     }
 
     // Accepted connection
-    remote_sock = s;
-    remote_in = s.getInputStream();
-    remote_out = s.getOutputStream();
+    remote_sock = monitor.wrap(ProxyMonitor.StreamType.REMOTE, s);
+    remote_in = remote_sock.getInputStream();
+    remote_out = remote_sock.getOutputStream();
 
     // Set timeout
     remote_sock.setSoTimeout(idleTimeout);
 
-    final InetAddress inetAddress = s.getInetAddress();
-    final int port = s.getPort();
-    log.info("Accepted from {}:{}", s.getInetAddress(), port);
+    final InetAddress inetAddress = remote_sock.getInetAddress();
+    final int port = remote_sock.getPort();
+    log.info("Accepted from {}:{}", remote_sock.getInetAddress(), port);
 
     ProxyMessage response;
 
@@ -423,12 +428,12 @@ class ProxyServerRunnable implements Runnable {
 
   private void startPipe(final Socket s) {
     mode = PIPE_MODE;
-    remote_sock = s;
+    remote_sock = monitor.wrap(ProxyMonitor.StreamType.REMOTE, s);;
     try {
-      remote_in = s.getInputStream();
-      remote_out = s.getOutputStream();
+      remote_in = remote_sock.getInputStream();
+      remote_out = remote_sock.getOutputStream();
       pipe_thread1 = Thread.currentThread();
-      pipe_thread2 = new Thread(this);
+      pipe_thread2 = threadFactory.newThread(this);
       pipe_thread2.start();
       pipe(in, remote_out);
     }
@@ -458,6 +463,18 @@ class ProxyServerRunnable implements Runnable {
     mode = ABORT_MODE;
     try {
       log.info("Aborting operation");
+      if (null != in) {
+        in.close();
+      }
+      if (null != out) {
+        out.close();
+      }
+      if (null != remote_in) {
+        remote_in.close();
+      }
+      if (null != remote_out) {
+        remote_out.close();
+      }
       if (remote_sock != null) {
         remote_sock.close();
       }

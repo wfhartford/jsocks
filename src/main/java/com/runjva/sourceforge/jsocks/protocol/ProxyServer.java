@@ -1,16 +1,13 @@
 package com.runjva.sourceforge.jsocks.protocol;
 
-import java.io.EOFException;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InterruptedIOException;
-import java.io.OutputStream;
-import java.io.PushbackInputStream;
-import java.net.ConnectException;
 import java.net.InetAddress;
-import java.net.NoRouteToHostException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,12 +29,36 @@ import com.runjva.sourceforge.jsocks.server.ServerAuthenticator;
  */
 public class ProxyServer {
 
-  private ServerSocket ss;
-
-  private ServerAuthenticator auth;
-
-
   private static final Logger log = LoggerFactory.getLogger(ProxyServer.class);
+
+  private static final Thread.UncaughtExceptionHandler UNCAUGHT_EXCEPTION_HANDLER =
+      new Thread.UncaughtExceptionHandler() {
+
+        @Override
+        public void uncaughtException(final Thread t, final Throwable e) {
+          log.warn("Thread {} threw uncaught exception", t, e);
+        }
+      };
+
+  private static final ThreadFactory DEFAULT_THREAD_FACTORY = new ThreadFactory() {
+    private final AtomicLong COUNTER = new AtomicLong();
+
+    @Override
+    public Thread newThread(final Runnable runnable) {
+      final Thread thread = new Thread(runnable);
+      thread.setName("ProxyServer-thread-" + COUNTER.incrementAndGet());
+      thread.setUncaughtExceptionHandler(UNCAUGHT_EXCEPTION_HANDLER);
+      return thread;
+    }
+  };
+
+  private ServerSocket ss;
+  private final ServerAuthenticator auth;
+  private final ThreadFactory threadFactory;
+  private final ProxyMonitor monitor;
+
+
+  private final ExecutorService executorService;
   private SocksProxyBase proxy;
   private volatile ProxyStatus proxyStatus = ProxyStatus.STOPED;
   private int idleTimeout = 180000; // 3 minutes
@@ -52,7 +73,14 @@ public class ProxyServer {
    *     Authentication scheme to be used.
    */
   public ProxyServer(final ServerAuthenticator auth) {
+    this(auth, DEFAULT_THREAD_FACTORY, NullProxyMonitor.INSTANCE);
+  }
+
+  public ProxyServer(final ServerAuthenticator auth, final ThreadFactory threadFactory, final ProxyMonitor monitor) {
     this.auth = auth;
+    this.threadFactory = threadFactory;
+    this.monitor = monitor;
+    this.executorService = Executors.newCachedThreadPool(threadFactory);
   }
 
   // Public methods
@@ -167,9 +195,9 @@ public class ProxyServer {
         final int port2 = s.getPort();
         log.info("Accepted from:{}:{}", hostName, port2);
 
-        final ProxyServerParams params = new ProxyServerParams(idleTimeout, acceptTimeout, proxy, auth);
-        final ProxyServerRunnable ps = new ProxyServerRunnable(params, s);
-        (new Thread(ps)).start();
+        final ProxyServerParams params =
+            new ProxyServerParams(idleTimeout, acceptTimeout, proxy, auth, threadFactory, monitor);
+        executorService.submit(new ProxyServerRunnable(params, monitor.wrap(ProxyMonitor.StreamType.CLIENT, s)));
       }
     }
     catch (final IOException ioe) {

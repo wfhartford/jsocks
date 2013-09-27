@@ -153,7 +153,7 @@ public class SOCKS {
     int val;
     val = readInt(props, "iddleTimeout");
     if (val >= 0) {
-      proxyServer.setIddleTimeout(val);
+      proxyServer.setIdleTimeout(val);
       inform("Setting iddle timeout to " + val + " ms.");
     }
     val = readInt(props, "acceptTimeout");

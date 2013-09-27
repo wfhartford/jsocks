@@ -28,7 +28,7 @@ public class ProxyServerTest {
     ProxyServer proxyServer = new ProxyServer(auth);
 
     // config timeouts
-    proxyServer.setIddleTimeout(iddleTimeout);
+    proxyServer.setIdleTimeout(iddleTimeout);
     proxyServer.setAcceptTimeout(acceptTimeout);
     proxyServer.setUDPTimeout(udpTimeout);
 

@@ -178,7 +178,7 @@ public class InetRange implements Cloneable {
    * was on my machine.
    * </ol>
    *
-   * @param host
+   * @param host0
    *     Host name to check.
    * @param attemptResolve
    *     Wether to lookup ip address which corresponds to the host,if

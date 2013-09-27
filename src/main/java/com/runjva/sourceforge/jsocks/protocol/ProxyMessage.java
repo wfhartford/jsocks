@@ -72,7 +72,7 @@ public abstract class ProxyMessage {
    *
    * @param in
    *     Input stream to read response from.
-   * @param clinetMode
+   * @param client_mode
    *     If true read server response, else read client request.
    *
    * @throws SocksException

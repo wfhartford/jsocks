@@ -5,12 +5,11 @@ import org.junit.Test;
 import com.runjva.sourceforge.jsocks.server.IdentAuthenticator;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 public class ProxyServerTest {
 
   private static final long WHAIT_PROXY_START_TIMEOUT = 500;
-  private static final int DEFAUT_PROXY_PORT = 1080;
+  private static final int DEFAUT_PROXY_PORT = 10808;
 
   private ProxyServer getProxyServerInstance() {
     int iddleTimeout = 600000; // 10 minutes
@@ -45,51 +44,62 @@ public class ProxyServerTest {
   @Test
   public void shouldBeStartedAfterStart() {
     ProxyServer proxyServer = getProxyServerInstance();
-    assertEquals(ProxyStatus.STOPED, proxyServer.getProxyStatus());
-    startProxy(proxyServer, DEFAUT_PROXY_PORT);
+    try {
+      assertEquals(ProxyStatus.STOPED, proxyServer.getProxyStatus());
+      startProxy(proxyServer, DEFAUT_PROXY_PORT);
 
-    // sleep for a while to let proxy to start
-    sleep(WHAIT_PROXY_START_TIMEOUT);
-
-    boolean isStarted = ProxyStatus.STARTED.equals(proxyServer.getProxyStatus());
-    //stop proxy to free port before assertion check
-    proxyServer.stop();
-
-    //check that proxy was in started state
-    assertTrue(isStarted);
+      // sleep for a while to let proxy to start
+      sleep(WHAIT_PROXY_START_TIMEOUT);
+      assertEquals(ProxyStatus.STARTED, proxyServer.getProxyStatus());
+    }
+    finally {
+      //stop proxy to free port before assertion check
+      proxyServer.stop();
+    }
   }
 
   @Test
   public void shouldBeStopedAfterStop() {
     ProxyServer proxyServer = getProxyServerInstance();
-    startProxy(proxyServer, DEFAUT_PROXY_PORT);
-    sleep(WHAIT_PROXY_START_TIMEOUT);
+    try {
+      assertEquals(ProxyStatus.STOPED, proxyServer.getProxyStatus());
+      startProxy(proxyServer, DEFAUT_PROXY_PORT);
 
-    //proxy should be started
-    boolean isStarted = ProxyStatus.STARTED.equals(proxyServer.getProxyStatus());
-    //stop proxy to free port before assertion check
-    proxyServer.stop();
-
-    //check that proxy was in started state
-    assertTrue(isStarted);
-
-    assertEquals(ProxyStatus.STOPED, proxyServer.getProxyStatus());
+      // sleep for a while to let proxy to start
+      sleep(WHAIT_PROXY_START_TIMEOUT);
+      assertEquals(ProxyStatus.STARTED, proxyServer.getProxyStatus());
+    }
+    finally {
+      //stop proxy to free port before assertion check
+      proxyServer.stop();
+      assertEquals(ProxyStatus.STOPED, proxyServer.getProxyStatus());
+    }
   }
 
   @Test
   public void shouldBeErrorOnException() {
-    //start another proxy to bind port
     ProxyServer anotherProxyServer = getProxyServerInstance();
-    startProxy(anotherProxyServer, DEFAUT_PROXY_PORT);
-    sleep(WHAIT_PROXY_START_TIMEOUT);
+    try {
+      ProxyServer proxyServer = getProxyServerInstance();
+      try {
+        //start another proxy to bind port
+        startProxy(anotherProxyServer, DEFAUT_PROXY_PORT);
+        sleep(WHAIT_PROXY_START_TIMEOUT);
+        assertEquals(ProxyStatus.STARTED, anotherProxyServer.getProxyStatus());
 
+        startProxy(proxyServer, DEFAUT_PROXY_PORT);
+        sleep(WHAIT_PROXY_START_TIMEOUT);
 
-    ProxyServer proxyServer = getProxyServerInstance();
-    startProxy(proxyServer, DEFAUT_PROXY_PORT);
-    sleep(WHAIT_PROXY_START_TIMEOUT);
-
-    //should be exception because port already taken
-    assertEquals(ProxyStatus.ERROR, proxyServer.getProxyStatus());
+        //should be exception because port already taken
+        assertEquals(ProxyStatus.ERROR, proxyServer.getProxyStatus());
+      }
+      finally {
+        proxyServer.stop();
+      }
+    }
+    finally {
+      anotherProxyServer.stop();
+    }
   }
 
   private void sleep(long timeToSleep) {

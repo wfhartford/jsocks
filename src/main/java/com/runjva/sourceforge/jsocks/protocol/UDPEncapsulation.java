@@ -1,5 +1,7 @@
 package com.runjva.sourceforge.jsocks.protocol;
 
+import java.io.IOException;
+
 /**
  * This interface provides for datagram encapsulation for SOCKSv5 protocol.
  * <p/>
@@ -29,7 +31,7 @@ public interface UDPEncapsulation {
    *         involves bit mangling, and no additional data is being added or
    *         removed.
    *
-   * @throw IOException if for some reason data can be transformed correctly.
+   * @throws IOException if for some reason data can be transformed correctly.
    */
-  byte[] udpEncapsulate(byte[] data, boolean out) throws java.io.IOException;
+  byte[] udpEncapsulate(byte[] data, boolean out) throws IOException;
 }

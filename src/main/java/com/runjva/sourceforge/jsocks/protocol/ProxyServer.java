@@ -12,11 +12,9 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.runjva.sourceforge.jsocks.monitor.LogProxyMonitor;
+import com.runjva.sourceforge.jsocks.monitor.NullProxyMonitor;
 import com.runjva.sourceforge.jsocks.monitor.ProxyMonitor;
 import com.runjva.sourceforge.jsocks.server.ServerAuthenticator;
-import com.runjva.sourceforge.jsocks.server.UserPasswordAuthenticator;
-import com.runjva.sourceforge.jsocks.server.UserValidation;
 
 /**
  * SOCKS4 and SOCKS5 proxy, handles both protocols simultaniously. Implements
@@ -67,30 +65,27 @@ public class ProxyServer {
   private volatile ProxyStatus proxyStatus = ProxyStatus.STOPED;
   private int idleTimeout = 180000; // 3 minutes
   private int acceptTimeout = 180000; // 3 minutes
-  // Public Constructors
-  // ///////////////////
-
-  public static void main(String[] args) {
-    final ServerAuthenticator authenticator = new UserPasswordAuthenticator(new UserValidation() {
-      @Override
-      public boolean isUserValid(final String username, final String password, final Socket connection) {
-        return "user".equals(username) && "pass".equals(password);
-      }
-    });
-    final ProxyServer proxyServer = new ProxyServer(authenticator, DEFAULT_THREAD_FACTORY, LogProxyMonitor.INSTANCE);
-    proxyServer.start(1080);
-  }
 
   /**
-   * Creates a proxy server with given Authentication scheme.
+   * Creates a proxy server with the given Authentication scheme, using the default thread factory and no monitoring.
    *
    * @param auth
    *     Authentication scheme to be used.
    */
   public ProxyServer(final ServerAuthenticator auth) {
-    this(auth, DEFAULT_THREAD_FACTORY, LogProxyMonitor.INSTANCE);
+    this(auth, DEFAULT_THREAD_FACTORY, NullProxyMonitor.INSTANCE);
   }
 
+  /**
+   * Create a proxy server with the given Authentication schema, thread factory and monitor.
+   *
+   * @param auth
+   *     The authentication schem to use
+   * @param threadFactory
+   *     The thread factory
+   * @param monitor
+   *     The proxy monitor
+   */
   public ProxyServer(final ServerAuthenticator auth, final ThreadFactory threadFactory, final ProxyMonitor monitor) {
     this.auth = auth;
     this.threadFactory = threadFactory;

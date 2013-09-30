@@ -11,7 +11,7 @@ import static org.junit.Assert.assertTrue;
 public class DnsProxyServerTest {
 
   private static final long WHAIT_PROXY_START_TIMEOUT = 500;
-  private static final int DEFAUT_PROXY_PORT = 1080;
+  private static final int DEFAUT_PROXY_PORT = 10807;
 
   private DnsProxyServer getDnsProxyServerInstance() {
     int iddleTimeout = 600000; // 10 minutes

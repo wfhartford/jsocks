@@ -8,8 +8,8 @@ import java.io.OutputStream;
  */
 public class ServerAuthenticatorNone extends ServerAuthenticatorBase {
 
-  public ServerAuthenticatorNone(InputStream in, OutputStream out) {
-    super(in, out);
+  public ServerAuthenticatorNone(InputStream in, OutputStream out, String username) {
+    super(in, out, username);
   }
 
 }

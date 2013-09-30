@@ -2,6 +2,7 @@ package com.runjva.sourceforge.jsocks.protocol;
 
 import java.util.concurrent.ThreadFactory;
 
+import com.runjva.sourceforge.jsocks.monitor.ProxyMonitor;
 import com.runjva.sourceforge.jsocks.server.ServerAuthenticator;
 
 class ProxyServerParams {

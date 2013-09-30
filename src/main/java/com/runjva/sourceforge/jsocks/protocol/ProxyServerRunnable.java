@@ -16,6 +16,7 @@ import java.util.concurrent.ThreadFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.runjva.sourceforge.jsocks.monitor.ProxyMonitor;
 import com.runjva.sourceforge.jsocks.server.ServerAuthenticator;
 
 class ProxyServerRunnable implements Runnable {
@@ -376,7 +377,7 @@ class ProxyServerRunnable implements Runnable {
     }
 
     // Accepted connection
-    remote_sock = monitor.wrap(ProxyMonitor.StreamType.REMOTE, s);
+    remote_sock = monitor.monitor(ProxyMonitor.StreamEndpoint.REMOTE, s, auth.getAuthenticatedUser());
     remote_in = remote_sock.getInputStream();
     remote_out = remote_sock.getOutputStream();
 
@@ -428,8 +429,8 @@ class ProxyServerRunnable implements Runnable {
 
   private void startPipe(final Socket s) {
     mode = PIPE_MODE;
-    remote_sock = monitor.wrap(ProxyMonitor.StreamType.REMOTE, s);;
     try {
+      remote_sock = monitor.monitor(ProxyMonitor.StreamEndpoint.REMOTE, s, auth.getAuthenticatedUser());;
       remote_in = remote_sock.getInputStream();
       remote_out = remote_sock.getOutputStream();
       pipe_thread1 = Thread.currentThread();

@@ -37,6 +37,7 @@ import com.runjva.sourceforge.jsocks.protocol.UDPEncapsulation;
 public abstract class ServerAuthenticatorBase implements ServerAuthenticator {
 
   static final byte[] socks5response = { 5, 0 };
+  private final String username;
 
   InputStream in;
   OutputStream out;
@@ -47,6 +48,7 @@ public abstract class ServerAuthenticatorBase implements ServerAuthenticator {
   public ServerAuthenticatorBase() {
     this.in = null;
     this.out = null;
+    this.username = null;
   }
 
   /**
@@ -58,9 +60,10 @@ public abstract class ServerAuthenticatorBase implements ServerAuthenticator {
    * @param out
    *     Output stream to return from getOutputStream method.
    */
-  public ServerAuthenticatorBase(InputStream in, OutputStream out) {
+  public ServerAuthenticatorBase(InputStream in, OutputStream out, String username) {
     this.in = in;
     this.out = out;
+    this.username = username;
   }
 
   /**
@@ -89,7 +92,7 @@ public abstract class ServerAuthenticatorBase implements ServerAuthenticator {
       return null;
     }
 
-    return new ServerAuthenticatorNone(in, out);
+    return new ServerAuthenticatorNone(in, out, null);
   }
 
   /**
@@ -120,6 +123,11 @@ public abstract class ServerAuthenticatorBase implements ServerAuthenticator {
   @Override
   public UDPEncapsulation getUdpEncapsulation() {
     return null;
+  }
+
+  @Override
+  public String getAuthenticatedUser() {
+    return username;
   }
 
   /**

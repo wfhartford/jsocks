@@ -55,7 +55,7 @@ public class IdentAuthenticator extends ServerAuthenticatorBase {
    *     was not required.
    */
   IdentAuthenticator(InputStream in, OutputStream out, String user) {
-    super(in, out);
+    super(in, out, user);
     this.user = user;
   }
 

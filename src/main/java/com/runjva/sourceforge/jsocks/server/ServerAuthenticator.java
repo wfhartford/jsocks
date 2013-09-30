@@ -77,6 +77,13 @@ public interface ServerAuthenticator {
   UDPEncapsulation getUdpEncapsulation();
 
   /**
+   * Get the user which has been authenticated, or {@code null} if no user has been authenticated.
+   *
+   * @return The authenticated user, or {@code null} if no valid authenication was recieved
+   */
+  String getAuthenticatedUser();
+
+  /**
    * This method is called when a request have been read.
    * <p/>
    * Implementation should decide wether to grant request or not. Returning

@@ -12,7 +12,11 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.runjva.sourceforge.jsocks.monitor.LogProxyMonitor;
+import com.runjva.sourceforge.jsocks.monitor.ProxyMonitor;
 import com.runjva.sourceforge.jsocks.server.ServerAuthenticator;
+import com.runjva.sourceforge.jsocks.server.UserPasswordAuthenticator;
+import com.runjva.sourceforge.jsocks.server.UserValidation;
 
 /**
  * SOCKS4 and SOCKS5 proxy, handles both protocols simultaniously. Implements
@@ -66,6 +70,17 @@ public class ProxyServer {
   // Public Constructors
   // ///////////////////
 
+  public static void main(String[] args) {
+    final ServerAuthenticator authenticator = new UserPasswordAuthenticator(new UserValidation() {
+      @Override
+      public boolean isUserValid(final String username, final String password, final Socket connection) {
+        return "user".equals(username) && "pass".equals(password);
+      }
+    });
+    final ProxyServer proxyServer = new ProxyServer(authenticator, DEFAULT_THREAD_FACTORY, LogProxyMonitor.INSTANCE);
+    proxyServer.start(1080);
+  }
+
   /**
    * Creates a proxy server with given Authentication scheme.
    *
@@ -73,7 +88,7 @@ public class ProxyServer {
    *     Authentication scheme to be used.
    */
   public ProxyServer(final ServerAuthenticator auth) {
-    this(auth, DEFAULT_THREAD_FACTORY, NullProxyMonitor.INSTANCE);
+    this(auth, DEFAULT_THREAD_FACTORY, LogProxyMonitor.INSTANCE);
   }
 
   public ProxyServer(final ServerAuthenticator auth, final ThreadFactory threadFactory, final ProxyMonitor monitor) {
@@ -197,7 +212,8 @@ public class ProxyServer {
 
         final ProxyServerParams params =
             new ProxyServerParams(idleTimeout, acceptTimeout, proxy, auth, threadFactory, monitor);
-        executorService.submit(new ProxyServerRunnable(params, monitor.wrap(ProxyMonitor.StreamType.CLIENT, s)));
+        executorService
+            .submit(new ProxyServerRunnable(params, monitor.monitor(ProxyMonitor.StreamEndpoint.CLIENT, s, null)));
       }
     }
     catch (final IOException ioe) {
@@ -219,7 +235,12 @@ public class ProxyServer {
       }
     }
     catch (final IOException ioe) {
+      log.warn("Exception thrown closing the server socket", ioe);
     }
-    setProxyStatus(ProxyStatus.STOPED);
+    finally {
+      setProxyStatus(ProxyStatus.STOPED);
+      executorService.shutdown();
+    }
+
   }
 }

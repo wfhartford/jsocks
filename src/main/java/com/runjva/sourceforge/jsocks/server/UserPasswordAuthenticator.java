@@ -38,47 +38,49 @@ public class UserPasswordAuthenticator extends ServerAuthenticatorBase {
     if (!selectSocks5Authentication(in, out, METHOD_ID)) {
       return null;
     }
-    if (!doUserPasswordAuthentication(s, in, out)) {
+    final String username = doUserPasswordAuthentication(s, in, out);
+    if (null == username) {
       return null;
     }
 
-    return new ServerAuthenticatorNone(in, out);
+    return new ServerAuthenticatorNone(in, out, username);
   }
 
   // Private Methods
   // ////////////////
 
-  private boolean doUserPasswordAuthentication(Socket s, InputStream in,
+  private String doUserPasswordAuthentication(Socket s, InputStream in,
       OutputStream out) throws IOException {
     final int version = in.read();
     if (version != 1) {
-      return false;
+      return null;
     }
 
     final int ulen = in.read();
     if (ulen < 0) {
-      return false;
+      return null;
     }
 
     final byte[] user = new byte[ulen];
     in.read(user);
     final int plen = in.read();
     if (plen < 0) {
-      return false;
+      return null;
     }
     final byte[] password = new byte[plen];
     in.read(password);
 
-    if (validator.isUserValid(new String(user), new String(password), s)) {
+    final String username = new String(user);
+    if (validator.isUserValid(username, new String(password), s)) {
       // System.out.println("user valid");
       out.write(new byte[] { 1, 0 });
     }
     else {
       // System.out.println("user invalid");
       out.write(new byte[] { 1, 1 });
-      return false;
+      return null;
     }
 
-    return true;
+    return username;
   }
 }

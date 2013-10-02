@@ -1,6 +1,6 @@
 package com.runjva.sourceforge.jsocks.protocol;
 
-import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ExecutorService;
 
 import com.runjva.sourceforge.jsocks.monitor.ProxyMonitor;
 import com.runjva.sourceforge.jsocks.server.ServerAuthenticator;
@@ -10,16 +10,16 @@ class ProxyServerParams {
   private final int acceptTimeout;
   private final SocksProxyBase proxy;
   private final ServerAuthenticator auth;
-  private final ThreadFactory threadFactory;
+  private final ExecutorService executorService;
   private final ProxyMonitor monitor;
 
   ProxyServerParams(final int idleTimeout, final int acceptTimeout, final SocksProxyBase proxy,
-      final ServerAuthenticator auth, final ThreadFactory threadFactory, final ProxyMonitor monitor) {
+      final ServerAuthenticator auth, final ExecutorService executorService, final ProxyMonitor monitor) {
     this.idleTimeout = idleTimeout;
     this.acceptTimeout = acceptTimeout;
     this.proxy = proxy;
     this.auth = auth;
-    this.threadFactory = threadFactory;
+    this.executorService = executorService;
     this.monitor = monitor;
   }
 
@@ -39,8 +39,8 @@ class ProxyServerParams {
     return auth;
   }
 
-  ThreadFactory getThreadFactory() {
-    return threadFactory;
+  ExecutorService getExecutorService() {
+    return executorService;
   }
 
   ProxyMonitor getMonitor() {

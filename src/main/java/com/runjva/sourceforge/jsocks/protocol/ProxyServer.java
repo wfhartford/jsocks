@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.runjva.sourceforge.jsocks.monitor.NullProxyMonitor;
+import com.runjva.sourceforge.jsocks.monitor.LogProxyMonitor;
 import com.runjva.sourceforge.jsocks.monitor.ProxyMonitor;
 import com.runjva.sourceforge.jsocks.server.ServerAuthenticator;
 
@@ -56,13 +56,13 @@ public class ProxyServer {
 
   private ServerSocket ss;
   private final ServerAuthenticator auth;
-  private final ThreadFactory threadFactory;
   private final ProxyMonitor monitor;
 
 
   private final ExecutorService executorService;
   private SocksProxyBase proxy;
-  private volatile ProxyStatus proxyStatus = ProxyStatus.STOPED;
+  private final Object statusMutex = new Object();
+  private ProxyStatus proxyStatus = ProxyStatus.STOPED;
   private int idleTimeout = 180000; // 3 minutes
   private int acceptTimeout = 180000; // 3 minutes
 
@@ -73,7 +73,7 @@ public class ProxyServer {
    *     Authentication scheme to be used.
    */
   public ProxyServer(final ServerAuthenticator auth) {
-    this(auth, DEFAULT_THREAD_FACTORY, NullProxyMonitor.INSTANCE);
+    this(auth, DEFAULT_THREAD_FACTORY, LogProxyMonitor.get());
   }
 
   /**
@@ -87,10 +87,24 @@ public class ProxyServer {
    *     The proxy monitor
    */
   public ProxyServer(final ServerAuthenticator auth, final ThreadFactory threadFactory, final ProxyMonitor monitor) {
+    this(auth, Executors.newCachedThreadPool(threadFactory), monitor);
+  }
+
+  /**
+   * Create a proxy server with the given Authentication schema, thread factory and monitor.
+   *
+   * @param auth
+   *     The authentication schem to use
+   * @param executorService
+   *     The service used to perform work
+   * @param monitor
+   *     The proxy monitor
+   */
+  public ProxyServer(final ServerAuthenticator auth, final ExecutorService executorService,
+      final ProxyMonitor monitor) {
     this.auth = auth;
-    this.threadFactory = threadFactory;
     this.monitor = monitor;
-    this.executorService = Executors.newCachedThreadPool(threadFactory);
+    this.executorService = executorService;
   }
 
   // Public methods
@@ -166,11 +180,43 @@ public class ProxyServer {
    * @return The current status
    */
   public ProxyStatus getProxyStatus() {
-    return proxyStatus;
+    synchronized (statusMutex) {
+      return proxyStatus;
+    }
   }
 
-  private void setProxyStatus(ProxyStatus proxyStatus) {
-    this.proxyStatus = proxyStatus;
+  private void setProxyStatus(final ProxyStatus proxyStatus) {
+    synchronized (statusMutex) {
+      this.proxyStatus = proxyStatus;
+      statusMutex.notifyAll();
+    }
+  }
+
+  public ProxyStatus awaitStartup() throws InterruptedException {
+    synchronized (statusMutex) {
+      while (proxyStatus == ProxyStatus.STOPED) {
+        statusMutex.wait();
+      }
+      return proxyStatus;
+    }
+  }
+
+  public int getPort() {
+    synchronized (statusMutex) {
+      if (ProxyStatus.STARTED != proxyStatus) {
+        throw new IllegalStateException("Proxy must be started; currently " + proxyStatus);
+      }
+      return ss.getLocalPort();
+    }
+  }
+
+  public String getHost() {
+    synchronized (statusMutex) {
+      if (ProxyStatus.STARTED != proxyStatus) {
+        throw new IllegalStateException("Proxy must be started; currently " + proxyStatus);
+      }
+      return ss.getInetAddress().getHostAddress();
+    }
   }
 
   /**
@@ -206,7 +252,7 @@ public class ProxyServer {
         log.info("Accepted from:{}:{}", hostName, port2);
 
         final ProxyServerParams params =
-            new ProxyServerParams(idleTimeout, acceptTimeout, proxy, auth, threadFactory, monitor);
+            new ProxyServerParams(idleTimeout, acceptTimeout, proxy, auth, executorService, monitor);
         executorService
             .submit(new ProxyServerRunnable(params, monitor.monitor(ProxyMonitor.StreamEndpoint.CLIENT, s, null)));
       }

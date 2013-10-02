@@ -5,9 +5,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.io.CountingInputStream;
 
 public final class MonitorInputStream extends FilterInputStream {
+  private static final Logger log = LoggerFactory.getLogger(MonitorInputStream.class);
   private final AtomicBoolean closed = new AtomicBoolean();
   private final MonitorSocket socket;
 
@@ -43,6 +47,7 @@ public final class MonitorInputStream extends FilterInputStream {
   @Override
   public void close() throws IOException {
     if (closed.compareAndSet(false, true)) {
+      log.debug("Closing {}", this);
       try {
         socket.accountFor(ProxyMonitor.StreamDirection.INPUT, ((CountingInputStream) in).getCount());
       }

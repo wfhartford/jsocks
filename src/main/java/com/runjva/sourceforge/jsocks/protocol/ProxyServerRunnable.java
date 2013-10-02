@@ -11,7 +11,8 @@ import java.net.InetAddress;
 import java.net.NoRouteToHostException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,7 +36,8 @@ class ProxyServerRunnable implements Runnable {
   private OutputStream out, remote_out;
   private int mode;
 
-  private Thread pipe_thread1, pipe_thread2;
+  private Thread pipe_thread1;
+  private Future<?> pipeThreadTwoFuture;
   private ServerSocket ss;
   private long lastReadTime;
 
@@ -43,7 +45,7 @@ class ProxyServerRunnable implements Runnable {
   private final int acceptTimeout;
   private final SocksProxyBase proxy;
   private ServerAuthenticator auth;
-  private final ThreadFactory threadFactory;
+  private final ExecutorService executorService;
   private final ProxyMonitor monitor;
 
   ProxyServerRunnable(final ProxyServerParams params, final Socket s) {
@@ -51,7 +53,7 @@ class ProxyServerRunnable implements Runnable {
     this.acceptTimeout = params.getAcceptTimeout();
     this.proxy = params.getProxy();
     this.auth = params.getAuth();
-    this.threadFactory = params.getThreadFactory();
+    this.executorService = params.getExecutorService();
     this.monitor = params.getMonitor();
     this.sock = s;
     this.mode = START_MODE;
@@ -267,8 +269,7 @@ class ProxyServerRunnable implements Runnable {
     mode = ACCEPT_MODE;
 
     pipe_thread1 = Thread.currentThread();
-    pipe_thread2 = threadFactory.newThread(this);
-    pipe_thread2.start();
+    pipeThreadTwoFuture = executorService.submit(this);
 
     // Make timeout infinit.
     sock.setSoTimeout(0);
@@ -430,12 +431,12 @@ class ProxyServerRunnable implements Runnable {
   private void startPipe(final Socket s) {
     mode = PIPE_MODE;
     try {
-      remote_sock = monitor.monitor(ProxyMonitor.StreamEndpoint.REMOTE, s, auth.getAuthenticatedUser());;
+      remote_sock = monitor.monitor(ProxyMonitor.StreamEndpoint.REMOTE, s, auth.getAuthenticatedUser());
+      ;
       remote_in = remote_sock.getInputStream();
       remote_out = remote_sock.getOutputStream();
       pipe_thread1 = Thread.currentThread();
-      pipe_thread2 = threadFactory.newThread(this);
-      pipe_thread2.start();
+      pipeThreadTwoFuture = executorService.submit(this);
       pipe(in, remote_out);
     }
     catch (final IOException ioe) {
@@ -464,38 +465,36 @@ class ProxyServerRunnable implements Runnable {
     mode = ABORT_MODE;
     try {
       log.info("Aborting operation");
-      if (null != in) {
-        in.close();
-      }
-      if (null != out) {
-        out.close();
-      }
-      if (null != remote_in) {
-        remote_in.close();
-      }
-      if (null != remote_out) {
-        remote_out.close();
-      }
-      if (remote_sock != null) {
-        remote_sock.close();
-      }
-      if (sock != null) {
-        sock.close();
-      }
-      if (relayServer != null) {
+      close(in);
+      close(out);
+      close(remote_in);
+      close(remote_out);
+      close(remote_sock);
+      close(sock);
+      if (null != relayServer) {
         relayServer.stop();
       }
-      if (ss != null) {
-        ss.close();
-      }
-      if (pipe_thread1 != null) {
+      close(ss);
+      if (null != pipe_thread1) {
         pipe_thread1.interrupt();
       }
-      if (pipe_thread2 != null) {
-        pipe_thread2.interrupt();
+      if (null != pipeThreadTwoFuture) {
+        pipeThreadTwoFuture.cancel(true);
       }
     }
-    catch (final IOException ioe) {
+    catch (RuntimeException e) {
+      log.warn("Exception thrown aborting", e);
+    }
+  }
+
+  private void close(AutoCloseable closeable) {
+    if (null != closeable) {
+      try {
+        closeable.close();
+      }
+      catch (final Exception e) {
+        log.warn("Exception closing {}", closeable, e);
+      }
     }
   }
 

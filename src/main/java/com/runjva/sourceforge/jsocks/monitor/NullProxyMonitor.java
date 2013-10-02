@@ -13,6 +13,6 @@ public class NullProxyMonitor extends ProxyMonitor {
 
   @Override
   public void accountFor(final StreamEndpoint type, final StreamDirection direction,
-      final SocketAddress address, final String user, final long bytes) {
+      final SocketAddress address, final String user, final long bytes, final long runTime) {
   }
 }

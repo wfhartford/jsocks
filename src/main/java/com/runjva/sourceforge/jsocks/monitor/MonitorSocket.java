@@ -8,18 +8,25 @@ import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.SocketException;
 import java.nio.channels.SocketChannel;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class MonitorSocket extends Socket {
+  private static final Logger log = LoggerFactory.getLogger(MonitorSocket.class);
+  private final AtomicBoolean closed = new AtomicBoolean();
+  private final long startTime = System.nanoTime();
   private final ProxyMonitor monitor;
   private final ProxyMonitor.StreamEndpoint type;
   private final String user;
   private final Socket socket;
   private final InputStream inputStream;
   private final OutputStream outputStream;
+  private long runTime;
 
   public MonitorSocket(final ProxyMonitor monitor, final ProxyMonitor.StreamEndpoint type, final String user,
-      final Socket socket)
-      throws IOException {
+      final Socket socket) throws IOException {
     this.monitor = monitor;
     this.type = type;
     this.user = user;
@@ -60,15 +67,19 @@ public final class MonitorSocket extends Socket {
 
   @Override
   public void close() throws IOException {
-    try {
-      socket.close();
-    }
-    finally {
+    if (closed.compareAndSet(false, true)) {
+      log.debug("Closing {}", this);
+      runTime = System.nanoTime() - startTime;
       try {
-        inputStream.close();
+        socket.close();
       }
       finally {
-        outputStream.close();
+        try {
+          inputStream.close();
+        }
+        finally {
+          outputStream.close();
+        }
       }
     }
   }
@@ -239,6 +250,7 @@ public final class MonitorSocket extends Socket {
   }
 
   public void accountFor(final ProxyMonitor.StreamDirection direction, final long bytes) {
-    monitor.accountFor(type, direction, getRemoteSocketAddress(), user, bytes);
+    final long time = 0 == runTime ? System.nanoTime() - startTime : runTime;
+    monitor.accountFor(type, direction, getRemoteSocketAddress(), user, bytes, time);
   }
 }

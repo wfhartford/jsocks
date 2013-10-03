@@ -68,4 +68,11 @@
     </plugins>
   </build>
 
+  <distributionManagement>
+    <snapshotRepository>
+      <id>ze.nexus.snapshot</id>
+      <name>ZE Snapshots</name>
+      <url>http://repo.zepower.com/content/repositories/ze.nexus.snapshot</url>
+    </snapshotRepository>
+  </distributionManagement>
 </project>
